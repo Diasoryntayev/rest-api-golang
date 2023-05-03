@@ -32,6 +32,8 @@ func (hook *writeHook) Levels() []logrus.Level {
 
 var e *logrus.Entry
 
+// Своя структура чтобы не делать связь приложеня с библиотекой logrus
+// для того чтобы библитеку logrus можно было легко заменить на любую другую
 type Logger struct {
 	*logrus.Entry
 }
