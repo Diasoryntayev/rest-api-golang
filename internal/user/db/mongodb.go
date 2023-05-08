@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"rest/internal/user"
@@ -38,12 +39,14 @@ func (d *db) FindOne(ctx context.Context, id string) (u user.User, err error) {
 	if err != nil {
 		return u, fmt.Errorf("failed to convert hex to objectid. hex: %s", id)
 	}
-	// mongo.getDatabase("test").getCollection("docs").find({})
 	filter := bson.M{"id": oid}
 
 	result := d.collection.FindOne(ctx, filter)
 	if result.Err() != nil {
-		// TODO 404
+		if errors.Is(result.Err(), mongo.ErrNoDocuments) {
+			// TODO ErrEntityNotFound
+			return u, fmt.Errorf("not found")
+		}
 		return u, fmt.Errorf("failed to find one user by id: %s due to error: %v", id, err)
 	}
 	if err = result.Decode(&u); err != nil {
