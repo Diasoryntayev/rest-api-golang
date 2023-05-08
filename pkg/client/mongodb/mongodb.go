@@ -29,9 +29,7 @@ func NewClient(ctx context.Context, host, port, username, password, database, au
 			Password:   password,
 		})
 	}
-	fmt.Println()
-	fmt.Println("AAAAAAAAAA: ", clientOptions)
-	fmt.Println()
+
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to mongoDB due to error: %v", err)
