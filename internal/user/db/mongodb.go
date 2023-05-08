@@ -34,6 +34,18 @@ func (d *db) Create(ctx context.Context, user user.User) (string, error) {
 	return "", fmt.Errorf("failed to convert object id to hex. probably oid: %s", oid)
 }
 
+func (d *db) FindAll(ctx context.Context) (u []user.User, err error) {
+	cursor, err := d.collection.Find(ctx, bson.M{})
+	if cursor.Err() != nil {
+		return u, fmt.Errorf("failed to find all users error: %v", err)
+	}
+
+	if err = cursor.All(ctx, &u); err != nil {
+		return u, fmt.Errorf("failed to read all documents from cursor. error: %v", err)
+	}
+	return u, nil
+}
+
 func (d *db) FindOne(ctx context.Context, id string) (u user.User, err error) {
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -92,6 +104,22 @@ func (d *db) Update(ctx context.Context, user user.User) error {
 }
 
 func (d *db) Delete(ctx context.Context, id string) error {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return fmt.Errorf("failed to convert user ID to objectID. ID=%s", id)
+	}
+
+	filter := bson.M{"_id": objectID}
+
+	result, err := d.collection.DeleteOne(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("failed to execute query. error: %v", err)
+	}
+	if result.DeletedCount == 0 {
+		// TODO ErrEntityNotFound 404
+		return fmt.Errorf("not found")
+	}
+	d.logger.Tracef("Deleted %d documents", result.DeletedCount)
 	return nil
 }
 
