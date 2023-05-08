@@ -18,7 +18,6 @@ type db struct {
 }
 
 func (d *db) Create(ctx context.Context, user user.User) (string, error) {
-	// nCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	d.logger.Debug("create user")
 	result, err := d.collection.InsertOne(ctx, user)
 	if err != nil {
@@ -54,6 +53,38 @@ func (d *db) FindOne(ctx context.Context, id string) (u user.User, err error) {
 }
 
 func (d *db) Update(ctx context.Context, user user.User) error {
+	objectID, err := primitive.ObjectIDFromHex(user.ID)
+	if err != nil {
+		return fmt.Errorf("failed to convert user ID to objectID. ID=%s", user.ID)
+	}
+
+	filter := bson.M{"_id": objectID}
+
+	userBytes, err := bson.Marshal(user)
+	if err != nil {
+		return fmt.Errorf("failed to marshal user. error: %v", err)
+	}
+
+	var updateUserObj bson.M
+	if err = bson.Unmarshal(userBytes, &updateUserObj); err != nil {
+		return fmt.Errorf("failed to unmarshl user bytes. error: %v", err)
+	}
+	delete(updateUserObj, "_id")
+
+	update := bson.M{
+		"$set": updateUserObj,
+	}
+
+	result, err := d.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("failed to execute update user query. error: %v", err)
+	}
+	if result.MatchedCount == 0 {
+		// TODO ErrEntityNotFound 404
+		return fmt.Errorf("not found")
+	}
+	d.logger.Tracef("Matched %d documents and Modified %d documents", result.MatchedCount, result.ModifiedCount)
+
 	return nil
 }
 
